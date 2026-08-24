@@ -1,0 +1,81 @@
+name: Release RPMs
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  rpm:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            rpm_arch: x86_64
+          - runner: ubuntu-24.04-arm
+            rpm_arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --locked
+      - run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Build RPM
+        env:
+          RPM_ARCH: ${{ matrix.rpm_arch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          version="${VERSION#v}"
+          topdir="${RUNNER_TEMP}/rpmbuild"
+          mkdir -p "${topdir}/BUILD" "${topdir}/BUILDROOT" "${topdir}/RPMS" "${topdir}/SOURCES" "${topdir}/SPECS" "${topdir}/SRPMS"
+          install -m 0755 target/release/asciiquarium "${topdir}/SOURCES/asciiquarium"
+          cp gpl.txt "${topdir}/SOURCES/gpl.txt"
+          rpmbuild -bb packaging/asciiquarium.spec \
+            --target "${RPM_ARCH}" \
+            --define "_topdir ${topdir}" \
+            --define "version ${version}"
+          find "${topdir}/RPMS" -name '*.rpm' -exec cp {} . \;
+          sha256sum ./*.rpm > "asciiquarium-${RPM_ARCH}.sha256"
+      - name: Verify RPM metadata
+        env:
+          RPM_ARCH: ${{ matrix.rpm_arch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          version="${VERSION#v}"
+          rpm_file="$(find . -maxdepth 1 -name '*.rpm' -print -quit)"
+          test "$(rpm -qp --queryformat '%{NAME}' "${rpm_file}")" = "asciiquarium"
+          test "$(rpm -qp --queryformat '%{VERSION}' "${rpm_file}")" = "${version}"
+          test "$(rpm -qp --queryformat '%{ARCH}' "${rpm_file}")" = "${RPM_ARCH}"
+          test "$(rpm -qp --queryformat '%{LICENSE}' "${rpm_file}")" = "GPL-2.0-or-later"
+          test "$(rpm -qp --queryformat '%{VENDOR}' "${rpm_file}")" = "Jmainguy"
+          test "$(rpm -qp --queryformat '%{PACKAGER}' "${rpm_file}")" = "Jonathan Seth Mainguy <jon@soh.re>"
+          rpm -qpl "${rpm_file}" | grep -Fx /usr/bin/asciiquarium
+      - uses: actions/upload-artifact@v6
+        with:
+          name: rpm-${{ matrix.rpm_arch }}
+          path: |
+            *.rpm
+            *.sha256
+
+  release:
+    needs: rpm
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: rpm-*
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            Native Rust RPMs for x86_64 and Arm64 (aarch64).
+
+            Inspired by Kirk Baucom's original Asciiquarium:
+            https://robobunny.com/projects/asciiquarium/html/
+          files: |
+            *.rpm
+            *.sha256
