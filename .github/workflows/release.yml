@@ -53,7 +53,7 @@ jobs:
           test "$(rpm -qp --queryformat '%{VENDOR}' "${rpm_file}")" = "Jmainguy"
           test "$(rpm -qp --queryformat '%{PACKAGER}' "${rpm_file}")" = "Jonathan Seth Mainguy <jon@soh.re>"
           rpm -qpl "${rpm_file}" | grep -Fx /usr/bin/asciiquarium
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: rpm-${{ matrix.rpm_arch }}
           path: |
@@ -64,7 +64,7 @@ jobs:
     needs: rpm
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           pattern: rpm-*
           merge-multiple: true
