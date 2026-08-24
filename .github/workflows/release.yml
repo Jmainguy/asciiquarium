@@ -32,7 +32,7 @@ jobs:
           topdir="${RUNNER_TEMP}/rpmbuild"
           mkdir -p "${topdir}/BUILD" "${topdir}/BUILDROOT" "${topdir}/RPMS" "${topdir}/SOURCES" "${topdir}/SPECS" "${topdir}/SRPMS"
           install -m 0755 target/release/asciiquarium "${topdir}/SOURCES/asciiquarium"
-          cp gpl.txt "${topdir}/SOURCES/gpl.txt"
+          cp LICENSE "${topdir}/SOURCES/LICENSE"
           rpmbuild -bb packaging/asciiquarium.spec \
             --target "${RPM_ARCH}" \
             --define "_topdir ${topdir}" \

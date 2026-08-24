@@ -19,10 +19,10 @@ resizing, and keyboard controls without a Perl runtime.
 
 %install
 install -Dpm0755 %{_sourcedir}/asciiquarium %{buildroot}%{_bindir}/asciiquarium
-install -Dpm0644 %{_sourcedir}/gpl.txt %{buildroot}%{_licensedir}/%{name}/gpl.txt
+install -Dpm0644 %{_sourcedir}/LICENSE %{buildroot}%{_licensedir}/%{name}/LICENSE
 
 %files
-%license %{_licensedir}/%{name}/gpl.txt
+%license %{_licensedir}/%{name}/LICENSE
 %{_bindir}/asciiquarium
 
 %changelog
